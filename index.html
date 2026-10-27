@@ -12,12 +12,16 @@ button:hover{border-color:var(--amb)}button.on{background:var(--navy);color:#fff
 .sw{width:12px;height:12px;border-radius:3px;border:1px solid #0002}
 #info{right:12px;top:12px;max-width:320px;display:none;border-left:4px solid var(--amb)}
 #help{right:12px;bottom:12px;max-width:300px;color:#334155;line-height:1.5}#help b{color:var(--navy)}
-@media (max-width:700px){#help{display:none}#top,#lay{max-width:46vw}}
+#lay #llw{max-height:calc(100vh - 260px);overflow:auto}#lay.fech #llw,#lay.fech #xr{display:none}#tl{font-weight:700;color:var(--navy);border:0;background:none;padding:0;font-size:13px}
+@media (max-width:700px),(max-height:620px){#help{display:none}
+ #top{left:8px;right:8px;top:8px;max-width:none;padding:8px}#top p{display:none}#top h1{font-size:13px}
+ #top .btns{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}#top button{white-space:nowrap;flex:0 0 auto}
+ #lay{left:8px;bottom:8px;max-width:70vw;padding:8px}#lay #llw{max-height:45vh}#info{top:auto;bottom:8px;right:8px;max-width:60vw}}
 </style></head><body><canvas id="c"></canvas>
 <div class="pan" id="top"><h1>Mezanino 45,00 × 3,00 m · piso +3,00</h1><p>CMO-MEZ-4503-001 rev. 00 · modelo 3D com furos, parafusos, arruelas, porcas e cortes</p>
 <div class="btns"><button id="zin" title="aproximar">＋</button><button id="zout" title="afastar">－</button><button data-v="iso">Isométrica</button><button data-v="frente">Frente</button><button data-v="cima">De cima</button><button data-v="lado">Lado</button>
 <button data-v="ini">Eixos 1–2</button><button data-v="esc">Escada</button><button data-v="base">Base da coluna</button><button data-v="topo">Topo / emenda</button><button data-v="mf">Mão-francesa</button><button data-v="degrau">Degrau</button><button data-v="console">Console no pilar</button><button data-v="parafuso">Parafuso (zoom)</button><button data-v="parede">Lado da parede</button></div></div>
-<div class="pan" id="lay"><b style="color:var(--navy)">Mostrar / esconder</b><div id="ll"></div><button id="xr" style="margin-top:6px">Raio-X (piso transparente)</button></div>
+<div class="pan" id="lay"><button id="tl">▾ Mostrar / esconder peças</button><div id="llw"><div id="ll"></div></div><button id="xr" style="margin-top:6px">Raio-X (piso transparente)</button></div>
 <div class="pan" id="info"></div>
 <div class="pan" id="help"><b>Girar:</b> clique e arraste<br><b>Mover:</b> 2 dedos deslizando no trackpad<br><b>Zoom:</b> pinça (abrir/fechar 2 dedos) ou botões + −<br><b>Girar em volta de uma peça:</b> duplo clique nela<br><b>Peça:</b> 1 clique mostra a marca<br><b>Perdeu?</b> botão “Isométrica”</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -85,6 +89,9 @@ cv.addEventListener('dblclick',e=>{ const p=pickPoint(e.clientX,e.clientY); if(!
   anim={t0:performance.now(),ft:C.target.clone(),fp:cam.position.clone(),tt:p,tp:cam.position.clone().add(p.clone().sub(C.target))}; });
 document.getElementById('zin').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,.6);
 document.getElementById('zout').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,1.6);
+const LAY=document.getElementById('lay'), TL=document.getElementById('tl');
+function setLay(f){LAY.classList.toggle('fech',f); TL.textContent=(f?'▸ ':'▾ ')+'Mostrar / esconder peças';}
+setLay(innerWidth<=700||innerHeight<=620); TL.onclick=()=>setLay(!LAY.classList.contains('fech'));
 function size(){const w=innerWidth,h=innerHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix();} addEventListener('resize',size); size();
 cam.position.set(...V.iso[1]); C.target.set(...V.iso[0]);
 (function loop(t){ if(anim){const k=Math.min(1,(t-anim.t0)/700), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; C.target.lerpVectors(anim.ft,anim.tt,e); cam.position.lerpVectors(anim.fp,anim.tp,e); if(k>=1)anim=null;}
