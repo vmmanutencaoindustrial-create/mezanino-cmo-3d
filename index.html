@@ -3,7 +3,7 @@
 <style>
 :root{--navy:#0f2d3c;--amb:#c3782d;--sl:#64748b;--bd:#e2e8f0;--bg:#f8fafc}
 *{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,"Segoe UI",Arial,sans-serif;background:#eef2f6;color:#1e293b;overflow:hidden}
-#c{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block}
+#c{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;touch-action:none}
 .pan{position:fixed;background:#fff;border:1px solid var(--bd);border-radius:10px;box-shadow:0 4px 18px rgba(15,45,60,.12);padding:10px 12px;font-size:13px}
 #top{left:12px;top:12px;max-width:300px}#top h1{font-size:15px;margin:0 0 2px;color:var(--navy)}#top p{margin:0 0 8px;color:var(--sl);font-size:12px}
 .btns{display:flex;flex-wrap:wrap;gap:5px}button{border:1px solid var(--bd);background:var(--bg);border-radius:7px;padding:6px 9px;font-size:12px;cursor:pointer;color:var(--navy)}
@@ -23,7 +23,7 @@ button:hover{border-color:var(--amb)}button.on{background:var(--navy);color:#fff
 <button data-v="ini">Eixos 1–2</button><button data-v="esc">Escada</button><button data-v="base">Base da coluna</button><button data-v="topo">Topo / emenda</button><button data-v="mf">Mão-francesa</button><button data-v="degrau">Degrau</button><button data-v="console">Console no pilar</button><button data-v="parafuso">Parafuso (zoom)</button><button data-v="parede">Lado da parede</button></div></div>
 <div class="pan" id="lay"><button id="tl">▾ Mostrar / esconder peças</button><div id="llw"><div id="ll"></div></div><button id="xr" style="margin-top:6px">Raio-X (piso transparente)</button></div>
 <div class="pan" id="info"></div>
-<div class="pan" id="help"><b>Girar:</b> clique e arraste<br><b>Mover:</b> 2 dedos deslizando no trackpad<br><b>Zoom:</b> pinça (abrir/fechar 2 dedos) ou botões + −<br><b>Girar em volta de uma peça:</b> duplo clique nela<br><b>Peça:</b> 1 clique mostra a marca<br><b>Perdeu?</b> botão “Isométrica”</div>
+<div class="pan" id="help"><b>Girar:</b> clique e arraste<br><b>Mover:</b> 2 dedos deslizando no trackpad<br><b>Zoom:</b> pinça (abrir/fechar 2 dedos) ou botões + −<br><b>No celular:</b> 1 dedo gira · pinça dá zoom · 2 dedos arrastando movem · toque duplo numa peça = gira em volta dela<br><b>Girar em volta de uma peça:</b> duplo clique nela<br><b>Peça:</b> 1 clique mostra a marca<br><b>Perdeu?</b> botão “Isométrica”</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three'; import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -32,7 +32,8 @@ const dec=(b,T)=>{const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.len
 const cv=document.getElementById('c'); const R=new THREE.WebGLRenderer({canvas:cv,antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
 const S=new THREE.Scene(); S.background=new THREE.Color(0xeef2f6);
 const cam=new THREE.PerspectiveCamera(40,1,10,500000); cam.up.set(0,0,1);
-const C=new OrbitControls(cam,cv); C.enableDamping=true; C.dampingFactor=.15; C.screenSpacePanning=true; C.enableZoom=false; C.rotateSpeed=.55; C.panSpeed=.9;
+const C=new OrbitControls(cam,cv); C.enableDamping=true; C.dampingFactor=.15; C.screenSpacePanning=true; C.enableZoom=true; C.zoomToCursor=true; C.zoomSpeed=1.2; C.rotateSpeed=.55; C.panSpeed=.9;
+C.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};   // celular: 1 dedo gira, pinça = zoom, 2 dedos arrastando = mover
 C.mouseButtons={LEFT:THREE.MOUSE.ROTATE,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.PAN};
 S.add(new THREE.HemisphereLight(0xffffff,0x8899aa,1.15)); const dl=new THREE.DirectionalLight(0xffffff,1.2); dl.position.set(-30000,-50000,60000); S.add(dl);
 const meshes={}, groupsT={}; const root=new THREE.Group(); S.add(root);
@@ -81,18 +82,25 @@ function zoomAt(cx,cy,f){ let p=pickPoint(cx,cy); if(!p){ const v=new THREE.Vect
 function panBy(dx,dy){ const d=cam.position.distanceTo(C.target), k=d*Math.tan(cam.fov*Math.PI/360)*2/innerHeight;
   const r=new THREE.Vector3().setFromMatrixColumn(cam.matrix,0), u=new THREE.Vector3().setFromMatrixColumn(cam.matrix,1);
   const off=r.multiplyScalar(dx*k).add(u.multiplyScalar(-dy*k)); cam.position.add(off); C.target.add(off); anim=null; }
-cv.addEventListener('wheel',e=>{ e.preventDefault();
+window.addEventListener('wheel',e=>{ if(e.target!==cv) return; e.preventDefault(); e.stopPropagation();   // trackpad/mouse: tratado aqui (o OrbitControls fica só com o toque)
   if(e.ctrlKey) zoomAt(e.clientX,e.clientY,Math.exp(e.deltaY*0.012));           // pinça no trackpad (ou Ctrl + roda)
   else if(e.deltaMode===1 || (Math.abs(e.deltaX)<1 && Math.abs(e.deltaY)>=50 && Number.isInteger(e.deltaY))) zoomAt(e.clientX,e.clientY,Math.exp(e.deltaY*0.002));   // roda de mouse
-  else panBy(e.deltaX,e.deltaY); },{passive:false});                            // 2 dedos deslizando = mover
+  else panBy(e.deltaX,e.deltaY); },{passive:false,capture:true});                            // 2 dedos deslizando = mover
 cv.addEventListener('dblclick',e=>{ const p=pickPoint(e.clientX,e.clientY); if(!p) return;
   anim={t0:performance.now(),ft:C.target.clone(),fp:cam.position.clone(),tt:p,tp:cam.position.clone().add(p.clone().sub(C.target))}; });
+// toque duplo (celular) = centro de giro na peça tocada
+let lastTap=0, lastXY=[0,0], nTouch=0;
+cv.addEventListener('pointerdown',e=>{ if(e.pointerType==='touch') nTouch++; });
+cv.addEventListener('pointerup',e=>{ if(e.pointerType!=='touch') return; nTouch=Math.max(0,nTouch-1); if(nTouch>0) return;
+  const t=performance.now(); if(t-lastTap<320 && Math.hypot(e.clientX-lastXY[0],e.clientY-lastXY[1])<30){ const p=pickPoint(e.clientX,e.clientY);
+    if(p) anim={t0:performance.now(),ft:C.target.clone(),fp:cam.position.clone(),tt:p,tp:cam.position.clone().add(p.clone().sub(C.target))}; lastTap=0; }
+  else { lastTap=t; lastXY=[e.clientX,e.clientY]; } });
 document.getElementById('zin').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,.6);
 document.getElementById('zout').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,1.6);
 const LAY=document.getElementById('lay'), TL=document.getElementById('tl');
 function setLay(f){LAY.classList.toggle('fech',f); TL.textContent=(f?'▸ ':'▾ ')+'Mostrar / esconder peças';}
 setLay(innerWidth<=700||innerHeight<=620); TL.onclick=()=>setLay(!LAY.classList.contains('fech'));
-function size(){const w=innerWidth,h=innerHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix();} addEventListener('resize',size); size();
+function size(){const w=innerWidth,h=innerHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix();} addEventListener('resize',size); addEventListener('orientationchange',()=>setTimeout(size,250)); if(window.visualViewport) visualViewport.addEventListener('resize',size); size(); setTimeout(size,300);
 cam.position.set(...V.iso[1]); C.target.set(...V.iso[0]);
 (function loop(t){ if(anim){const k=Math.min(1,(t-anim.t0)/700), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; C.target.lerpVectors(anim.ft,anim.tt,e); cam.position.lerpVectors(anim.fp,anim.tp,e); if(k>=1)anim=null;}
  C.update(); const dd=cam.position.distanceTo(C.target); const nn=Math.max(1,Math.min(200,dd/150)); if(Math.abs(cam.near-nn)>.5){cam.near=nn; cam.updateProjectionMatrix();}
